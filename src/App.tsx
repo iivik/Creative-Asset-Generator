@@ -37,6 +37,10 @@ export default function App() {
   const [generatingImageId, setGeneratingImageId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const [customPrompt, setCustomPrompt] = useState('');
+  const [customImage, setCustomImage] = useState<string | null>(null);
+  const [generatingCustomImage, setGeneratingCustomImage] = useState(false);
+
   useEffect(() => {
     try { localStorage.setItem('postText', postText); } catch (e) {}
   }, [postText]);
@@ -106,6 +110,28 @@ export default function App() {
     setConcepts([]);
     setGeneratedImages({});
     setError(null);
+    setCustomPrompt('');
+    setCustomImage(null);
+  };
+
+  const handleGenerateCustomImage = async () => {
+    if (!customPrompt.trim()) return;
+    setGeneratingCustomImage(true);
+    setError(null);
+    try {
+      const imageUrl = await generateImage(customPrompt, 'custom', '16:9');
+      setCustomImage(imageUrl);
+    } catch (err: any) {
+      console.error(err);
+      if (err.message?.includes("Requested entity was not found")) {
+        setHasKey(false);
+        setError("API Key error. Please re-select your API key.");
+      } else {
+        setError(`Failed to generate custom image. ${err.message}`);
+      }
+    } finally {
+      setGeneratingCustomImage(false);
+    }
   };
 
   if (hasKey === null) {
@@ -297,6 +323,88 @@ export default function App() {
                       </div>
                     </motion.div>
                   ))}
+                  
+                  {/* Custom Prompt Card */}
+                  <motion.div
+                    key="custom-prompt"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.6 }}
+                    className="bg-white rounded-2xl shadow-sm border border-zinc-200 overflow-hidden flex flex-col md:col-span-2"
+                  >
+                    {/* Image Area */}
+                    <div 
+                      className="bg-zinc-100 relative border-b border-zinc-200 flex items-center justify-center overflow-hidden group aspect-square md:aspect-[2/1]"
+                    >
+                      {generatingCustomImage ? (
+                        <div className="flex flex-col items-center text-zinc-500">
+                          <Loader2 size={32} className="animate-spin mb-3 text-zinc-900" />
+                          <span className="text-sm font-medium">Generating Asset...</span>
+                        </div>
+                      ) : customImage ? (
+                        <>
+                          <img 
+                            src={customImage} 
+                            alt="Custom Generated" 
+                            className="w-full h-full object-contain bg-zinc-100 p-2"
+                          />
+                          <div className="absolute inset-0 bg-zinc-900/20 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center gap-4">
+                            <a 
+                              href={customImage} 
+                              download="custom-asset.png"
+                              className="bg-white text-zinc-900 p-3 rounded-full hover:scale-110 transition-transform shadow-xl"
+                              title="Download Image"
+                            >
+                              <Download size={20} />
+                            </a>
+                            <button 
+                              onClick={handleGenerateCustomImage}
+                              className="bg-white text-zinc-900 p-3 rounded-full hover:scale-110 transition-transform shadow-xl"
+                              title="Regenerate Image"
+                            >
+                              <RefreshCw size={20} />
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex flex-col items-center text-zinc-400 p-6 text-center">
+                          <ImageIcon size={48} className="mb-3 opacity-30" />
+                          <p className="text-sm">Ready to generate</p>
+                          <p className="text-xs mt-1 opacity-70">Custom Idea</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Content Area */}
+                    <div className="p-5 flex-1 flex flex-col">
+                      <div className="flex items-start justify-between gap-2 mb-3">
+                        <h3 className="font-semibold text-zinc-900 leading-tight">Custom Prompt</h3>
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-zinc-100 text-zinc-800 whitespace-nowrap border border-zinc-200">
+                          Your Idea
+                        </span>
+                      </div>
+                      <p className="text-sm text-zinc-500 mb-4">
+                        Have a specific vision? Describe exactly what you want to generate.
+                      </p>
+                      <textarea
+                        value={customPrompt}
+                        onChange={(e) => setCustomPrompt(e.target.value)}
+                        placeholder="A hyper-realistic macro shot of a glowing neon brain..."
+                        className="w-full h-24 p-3 mb-4 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-zinc-900 resize-none text-sm transition-all"
+                      />
+                      
+                      {!customImage && (
+                        <button
+                          onClick={handleGenerateCustomImage}
+                          disabled={generatingCustomImage || !customPrompt.trim()}
+                          className="w-full mt-auto bg-zinc-900 hover:bg-zinc-800 disabled:bg-zinc-300 text-white font-medium py-2.5 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm shadow-sm"
+                        >
+                          <Sparkles size={16} />
+                          Generate Custom Image
+                        </button>
+                      )}
+                    </div>
+                  </motion.div>
                 </AnimatePresence>
               </div>
             )}
